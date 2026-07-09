@@ -58,6 +58,31 @@ class AES:
             matrix[i*4:i*4+4] = new_row
             i += 1
         self.shiftRows_text = matrix
+    def mixColumns(self):
+        matrix = self.shiftRows_text
+
+        column_count = 4
+        i = 0
+        while i < column_count:
+            column = matrix[i::4]
+            new_column = column.copy()
+            j = 0
+            while j < 4:
+                k = 0
+                xor_sum = 0
+                while k < 4:
+                    a = column[k]
+                    b = Mixer[j][k]
+                    xor_sum ^= gf_mult(a,b)
+                    k+=1
+                new_column[j] = xor_sum
+                j += 1
+            matrix[i::4] = new_column
+            i += 1
+        
+        self.mixColumns_text = matrix
+
+
 
     def print_text(self,text:bytes):
         count = 0
@@ -66,6 +91,7 @@ class AES:
             count += 1
             if count % 4 == 0:
                 print()
+
     
 
 aes = AES('abcde',mode="ECB",plaintext="1234567812345678")
@@ -73,4 +99,6 @@ aes.process_key()
 aes.process_plain_text()
 aes.subBytes()
 aes.shiftRows()
+aes.mixColumns()
+
 
