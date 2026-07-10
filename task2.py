@@ -117,16 +117,6 @@ if __name__ == "__main__":
 
 
 
-# s_a = str(s_a).encode()
-# salt = os.urandom(16)
-# hashed_key = hashlib.pbkdf2_hmac(
-#     'sha256',
-#     s_a,
-#     salt,
-#     100000,
-#     dklen=16
-# )
-
 
 
 
