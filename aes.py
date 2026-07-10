@@ -1,3 +1,4 @@
+import os
 from aes_helpers import Sbox, InvSbox, Rcon, Mixer, InvMixer, gf_mult
 class AES:
     def __init__(self,key,mode:str,plaintext):
@@ -153,26 +154,63 @@ class AES:
 
     def ECB(self,iteration_no):
         schedule_key = self.key
-        encrypted_text = self.byte_text.copy()
+        cipher_text = self.byte_text.copy()
         encrypted_block = None
         for iteration in range(iteration_no+1):
             block_no = 0
-            total_block = len(encrypted_text) // 16
+            total_block = len(cipher_text) // 16
 
             for block_no in range(total_block):
-                self.subBytes(encrypted_text[block_no*16:block_no*16+16])
+                self.subBytes(cipher_text[block_no*16:block_no*16+16])
                 self.shiftRows()
                 if iteration != iteration_no:
                     self.mixColumns()
                 
                 encrypted_block = self.addRoundKey(schedule_key,iteration,iteration == iteration_no)
-                encrypted_text[block_no*16:block_no*16+16] = encrypted_block
+                cipher_text[block_no*16:block_no*16+16] = encrypted_block
                 block_no +=1
 
             
             schedule_key = self.key_scheduling(schedule_key,iteration+1)
         
-        return encrypted_text
+        return cipher_text
+    
+    def CBC(self,iteration_no):
+        plaintext = self.byte_text.copy()
+        random_IV = bytearray(os.urandom(16))
+        cipher_text = random_IV
+
+        total_block = len(plaintext) // 16
+
+        block_no = 0
+        final_encryption = [random_IV]
+
+        while block_no < total_block:
+            schedule_key = self.key
+            block = plaintext[block_no * 16:block_no * 16 + 16]
+            byte_no = 0
+            while byte_no < 16:
+                block[byte_no] = block[byte_no] ^ cipher_text[byte_no]
+
+                byte_no += 1
+
+            iteration = 0
+            encrypted_block = block.copy()
+            while iteration < (iteration_no+1):
+                self.subBytes(encrypted_block)
+                self.shiftRows()
+                if iteration != iteration_no:
+                    self.mixColumns()
+                
+                encrypted_block = self.addRoundKey(schedule_key,iteration,iteration == iteration_no)
+
+                schedule_key = self.key_scheduling(schedule_key,iteration+1) 
+                iteration += 1
+
+            cipher_text =  encrypted_block
+            final_encryption.append(encrypted_block)
+            block_no += 1
+        return final_encryption
 
                 
                 
