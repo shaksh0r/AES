@@ -15,9 +15,7 @@ class AES:
         text_key = self.key
         key = self.key.encode('ascii')
         self.key = bytearray(self.padding(key))
-        # print("Key:")
-        # print(f"In ASCII: {text_key}")
-        # print(f"In Hex: {self.key.hex(sep=' ')}")
+
 
     def set_key_bytes(self, key_bytes: bytes):
         self.key = bytearray(key_bytes)
@@ -36,13 +34,9 @@ class AES:
         
         return data
     def process_plain_text(self):
-        # print(f"In ASCII: {plain_text}")
         byte_text = self.plaintext.encode('ascii')
-        # print(f"In Hex: {byte_text.hex(sep=' ')}")
         byte_text = self.padding(byte_text)
         self.byte_text = bytearray(byte_text)
-        # print(f"In ASCII (After Padding): {padded_text}")
-        # print(f"In Hex (After Padding): {byte_text.hex(sep=' ')}")
 
     def subBytes(self,byte_text):
         subBytes_text = []
@@ -334,7 +328,7 @@ class AES:
 
     def ECB_decrypt(self,iteration_no):
         round_keys = self.generate_round_keys(iteration_no)
-        decrypted_text = self.byte_text.copy()
+        decrypted_text = bytearray(self.ciphered_text)
 
         decryption_total = 0.0
         total_rounds = iteration_no + 1
@@ -372,14 +366,6 @@ class AES:
         unpadded_text = self.remove_padding(decrypted_text)
         self.decrypted_text = bytes(decrypted_text)
         self.decrypted_unpadded_text = bytes(unpadded_text)
-
-        # print("\nDeciphered Text:")
-        # print("Before Unpadding:")
-        # print(f"In HEX: {decrypted_text.hex(sep=' ')}")
-        # print(f"In ASCII: {decrypted_text.decode('utf-8', errors='replace')}")
-        # print("After Unpadding:")
-        # print(f"In ASCII: {unpadded_text.decode('utf-8', errors='replace')}")
-        # print(f"In HEX: {unpadded_text.hex(sep=' ')}")
 
         self.decryption_total_round_calls = total_rounds
         self.decryption_total = decryption_total
@@ -442,13 +428,7 @@ class AES:
         unpadded_text = self.remove_padding(decrypted_text)
         self.decrypted_text = bytes(decrypted_text)
         self.decrypted_unpadded_text = bytes(unpadded_text)
-        # print("\nDeciphered Text:")
-        # print("Before Unpadding:")
-        # print(f"In HEX: {decrypted_text.hex(sep=' ')}")
-        # print(f"In ASCII: {decrypted_text.decode('utf-8', errors='replace')}")
-        # print("After Unpadding:")
-        # print(f"In ASCII: {unpadded_decrypted_text.decode('utf-8', errors='replace')}")
-        # print(f"In HEX: {unpadded_decrypted_text.hex(sep=' ')}")
+
 
         self.decryption_total_round_calls = total_rounds * total_blocks
         self.decryption_total = decryption_total
@@ -456,6 +436,8 @@ class AES:
         return unpadded_text
     
     def print_report(self):
+        print(f"======================= AES / {self.mode} =======================")
+        print()
         print("Key:")
         print(f"In ASCII: {self.key.decode('utf-8')}")
         print(f"In Hex: {self.key.hex(sep=' ')}")
@@ -514,15 +496,4 @@ class AES:
 if __name__ == "__main__":
     aes = AES(key='BUET CSE20 Batch',mode="ECB",plaintext="We need picnic")
     aes.run()
-
-
-    
-
-    # print("Exection Time Details:")
-    # print(f"Key Schedule Time: total = {aes.key_schedule_total*1000:.4f} ms, per call = {aes.key_schedule_total/10*1000:.4f} ms")
-    # print(f"Encryption Time: total = {aes.encryption_total*1000:.4f} ms, per round = {aes.encryption_total/aes.encryption_total_round_calls*1000:.4f} ms")
-    # print(f"Decryption Time: total = {aes.decryption_total*1000:.4f} ms, per round = {aes.decryption_total/aes.decryption_total_round_calls*1000:.4f} ms")
-
-
-
 

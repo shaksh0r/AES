@@ -6,8 +6,8 @@ from task1 import AES
 from task2 import DiffieHellman
 
 
-HOST = '127.0.0.1'
-PORT = 50007
+HOST = 'localhost'
+PORT = 8000
 AES_ROUNDS = 9         
 
 
