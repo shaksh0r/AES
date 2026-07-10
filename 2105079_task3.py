@@ -1,9 +1,21 @@
 import socket
 import sys
 import hashlib
+import importlib.util
+from pathlib import Path
 
-from task1 import AES
-from task2 import DiffieHellman
+_aes_spec = importlib.util.spec_from_file_location("_task1", Path("2105079_task1.py"))
+assert _aes_spec is not None and _aes_spec.loader is not None, "Could not load 2105079_task1.py"
+_task1_mod = importlib.util.module_from_spec(_aes_spec)
+_aes_spec.loader.exec_module(_task1_mod)
+AES = _task1_mod.AES
+
+
+_dh_spec = importlib.util.spec_from_file_location("_task2", Path("2105079_task2.py"))
+assert _dh_spec is not None and _dh_spec.loader is not None, "Could not load task2.py"
+_task2_mod = importlib.util.module_from_spec(_dh_spec)
+_dh_spec.loader.exec_module(_task2_mod)
+DiffieHellman = _task2_mod.DiffieHellman
 
 
 HOST = 'localhost'
