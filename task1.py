@@ -18,6 +18,10 @@ class AES:
         print("Key:")
         print(f"In ASCII: {text_key}")
         print(f"In Hex: {self.key.hex(sep=' ')}")
+
+    def set_key_bytes(self, key_bytes: bytes):
+        """Set the AES key directly from a 16-byte key (for use by task3)."""
+        self.key = bytearray(key_bytes)
     
     def padding(self,data):
         data_length = len(data)
@@ -499,23 +503,24 @@ class AES:
 
     
 
-aes = AES('BUET CSE20 Batch',mode="CBC",plaintext="We need picnic")
-aes.process_key()
-aes.process_plain_text()
+if __name__ == "__main__":
+    aes = AES('BUET CSE20 Batch',mode="CBC",plaintext="We need picnic")
+    aes.process_key()
+    aes.process_plain_text()
 
-enc = aes.CBC(9)
+    enc = aes.CBC(9)
 
-encrypted_text = enc[0] + enc[1]
+    encrypted_text = enc[0] + enc[1]
 
-aes.byte_text = encrypted_text
+    aes.byte_text = encrypted_text
 
 
-dec = aes.CBC_decrypt(9)
+    dec = aes.CBC_decrypt(9)
 
-print("Exection Time Details:")
-print(f"Key Schedule Time: total = {aes.key_schedule_total*1000:.4f} ms, per call = {aes.key_schedule_total/10*1000:.4f} ms")
-print(f"Encryption Time: total = {aes.encryption_total*1000:.4f} ms, per round = {aes.encryption_total/aes.encryption_total_round_calls*1000:.4f} ms")
-print(f"Decryption Time: total = {aes.decryption_total*1000:.4f} ms, per round = {aes.decryption_total/aes.decryption_total_round_calls*1000:.4f} ms")
+    print("Exection Time Details:")
+    print(f"Key Schedule Time: total = {aes.key_schedule_total*1000:.4f} ms, per call = {aes.key_schedule_total/10*1000:.4f} ms")
+    print(f"Encryption Time: total = {aes.encryption_total*1000:.4f} ms, per round = {aes.encryption_total/aes.encryption_total_round_calls*1000:.4f} ms")
+    print(f"Decryption Time: total = {aes.decryption_total*1000:.4f} ms, per round = {aes.decryption_total/aes.decryption_total_round_calls*1000:.4f} ms")
 
 
 

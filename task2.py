@@ -73,40 +73,46 @@ class DiffieHellman:
                     if pow(g, r, P) != 1:
                         return P, g
 
-print("------------------------------------------------------------------------------------------")
-print("                                     Computation time for                                 ")
-print("         k     ---------------------------------------------------------------------------")
-print("                         A                       B                 shared key s           ")
-print("------------------------------------------------------------------------------------------")
+    def set_params(self, P, g):
+        """Set DH parameters from received values (for use by task3)."""
+        self.P = P
+        self.g = g
 
-for key in [128,192,256]:
-    dh = DiffieHellman(key_size=128, seed=42)
-    A_time = 0
-    B_time = 0
-    shared_key_time = 0
-    iteration_no = 5
-    for iteration in range(iteration_no):
-        A_start = time.process_time()
-        ka = dh.generate_private_key()
-        A  = dh.compute_public_key(ka)
-        A_end = time.process_time()
-        A_time += (A_end-A_start)
-        B_start = time.process_time()
-        kb = dh.generate_private_key()
-        B  = dh.compute_public_key(kb)
-        B_end = time.process_time()
-        B_time += (B_end-B_start)
+if __name__ == "__main__":
+    print("------------------------------------------------------------------------------------------")
+    print("                                     Computation time for                                 ")
+    print("         k     ---------------------------------------------------------------------------")
+    print("                         A                       B                 shared key s           ")
+    print("------------------------------------------------------------------------------------------")
 
-        shared_start = time.process_time()
-        shared_key = dh.compute_shared_secret(ka, B)
-        shared_end = time.process_time()
+    for key in [128,192,256]:
+        dh = DiffieHellman(key_size=128, seed=42)
+        A_time = 0
+        B_time = 0
+        shared_key_time = 0
+        iteration_no = 5
+        for iteration in range(iteration_no):
+            A_start = time.process_time()
+            ka = dh.generate_private_key()
+            A  = dh.compute_public_key(ka)
+            A_end = time.process_time()
+            A_time += (A_end-A_start)
+            B_start = time.process_time()
+            kb = dh.generate_private_key()
+            B  = dh.compute_public_key(kb)
+            B_end = time.process_time()
+            B_time += (B_end-B_start)
 
-        shared_key_time += (shared_end-shared_start)
-    
-    A_average = A_time / iteration_no
-    B_average = B_time / iteration_no
-    shared_key_average = shared_key_time / iteration_no
-    print(f"       {key}           {A_average:.5g}         {B_average:.5g}                {shared_key_average:.5g}")
+            shared_start = time.process_time()
+            shared_key = dh.compute_shared_secret(ka, B)
+            shared_end = time.process_time()
+
+            shared_key_time += (shared_end-shared_start)
+        
+        A_average = A_time / iteration_no
+        B_average = B_time / iteration_no
+        shared_key_average = shared_key_time / iteration_no
+        print(f"       {key}           {A_average:.5g}         {B_average:.5g}                {shared_key_average:.5g}")
 
 
 
