@@ -1,4 +1,6 @@
 import os
+import random
+
 from aes_helpers import Sbox, InvSbox, Rcon, Mixer, InvMixer, gf_mult
 class AES:
     def __init__(self,key,mode:str,plaintext):
@@ -211,7 +213,39 @@ class AES:
             final_encryption.append(encrypted_block)
             block_no += 1
         return final_encryption
+    
+    def generate_k_bit_odd(self,k):
+        lower = 2**(k-1) + 1 
+        upper = 2**k - 1   
+        num = random.randrange(lower, upper, 2)
+        return num
 
+    def miller_rabin_test(self,n, k=40):
+        if n < 2:
+            return False
+        if n in (2, 3):
+            return True
+        if n % 2 == 0:
+            return False
+
+        s = 0
+        d = n - 1
+        while d % 2 == 0:
+            s += 1
+            d //= 2
+
+        for _ in range(k):
+            a = random.randrange(2, n - 1)
+            x = pow(a, d, n)
+            if x == 1 or x == n - 1:
+                continue
+            for _ in range(s - 1):
+                x = pow(x, 2, n)
+                if x == n - 1:
+                    break
+            else:
+                return False
+        return True
                 
                 
         
