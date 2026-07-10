@@ -1,5 +1,7 @@
 import os
 import random
+import time
+import base64
 
 from aes_helpers import Sbox, InvSbox, Rcon, Mixer, InvMixer, gf_mult
 class AES:
@@ -10,12 +12,15 @@ class AES:
 
 
     def process_key(self):
+        text_key = self.key
         key = self.key.encode('ascii')
         self.key = bytearray(self.padding(key))
+        print("Key:")
+        print(f"In ASCII: {text_key}")
+        print(f"In Hex: {self.key.hex(sep=' ')}")
     
     def padding(self,data):
         data_length = len(data)
-        print(data_length)
         if data_length % 16 == 0:
             return data
         
@@ -27,11 +32,16 @@ class AES:
 
         
         return data
-    
     def process_plain_text(self):
+        plain_text = self.plaintext
+        print(f"In ASCII: {plain_text}")
         byte_text = self.plaintext.encode('ascii')
+        print(f"In Hex: {byte_text.hex(sep=' ')}")
         byte_text = self.padding(byte_text)
+        padded_text = byte_text.decode('utf-8')
         self.byte_text = bytearray(byte_text)
+        print(f"In ASCII (After Padding): {padded_text}")
+        print(f"In Hex (After Padding): {byte_text.hex(sep=' ')}")
 
     def subBytes(self,byte_text):
         subBytes_text = []
@@ -158,11 +168,17 @@ class AES:
         schedule_key = self.key
         cipher_text = self.byte_text.copy()
         encrypted_block = None
-        for iteration in range(iteration_no+1):
-            block_no = 0
-            total_block = len(cipher_text) // 16
 
-            for block_no in range(total_block):
+        key_schedule_total = 0.0
+        encryption_total = 0.0
+        total_rounds = iteration_no + 1
+        total_blocks = len(cipher_text) // 16
+
+        for iteration in range(total_rounds):
+            round_start = time.perf_counter()
+
+            block_no = 0
+            for block_no in range(total_blocks):
                 self.subBytes(cipher_text[block_no*16:block_no*16+16])
                 self.shiftRows()
                 if iteration != iteration_no:
@@ -172,9 +188,17 @@ class AES:
                 cipher_text[block_no*16:block_no*16+16] = encrypted_block
                 block_no +=1
 
-            
+            round_end = time.perf_counter()
+            encryption_total += (round_end - round_start)
+
+            ks_start = time.perf_counter()
             schedule_key = self.key_scheduling(schedule_key,iteration+1)
-        
+            ks_end = time.perf_counter()
+            key_schedule_total += (ks_end - ks_start)
+        self.encryption_total_round_calls = total_rounds
+        self.key_schedule_total = key_schedule_total
+        self.encryption_total = encryption_total
+
         return cipher_text
     
     def CBC(self,iteration_no):
@@ -183,6 +207,10 @@ class AES:
         cipher_text = random_IV
 
         total_block = len(plaintext) // 16
+        total_rounds = iteration_no + 1
+
+        key_schedule_total = 0.0
+        encryption_total = 0.0
 
         block_no = 0
         final_encryption = [random_IV]
@@ -198,7 +226,9 @@ class AES:
 
             iteration = 0
             encrypted_block = block.copy()
-            while iteration < (iteration_no+1):
+            while iteration < total_rounds:
+                round_start = time.perf_counter()
+
                 self.subBytes(encrypted_block)
                 self.shiftRows()
                 if iteration != iteration_no:
@@ -206,46 +236,34 @@ class AES:
                 
                 encrypted_block = self.addRoundKey(schedule_key,iteration,iteration == iteration_no)
 
+                round_end = time.perf_counter()
+                encryption_total += (round_end - round_start)
+
+                ks_start = time.perf_counter()
                 schedule_key = self.key_scheduling(schedule_key,iteration+1) 
+                ks_end = time.perf_counter()
+                key_schedule_total += (ks_end - ks_start)
+
                 iteration += 1
 
             cipher_text =  encrypted_block
             final_encryption.append(encrypted_block)
             block_no += 1
+
+        self.encryption_total_round_calls = total_rounds * total_block
+
+        ciphered_text = bytes(final_encryption[0] + final_encryption[1])
+
+        print("Ciphered Text:")
+        print("IV is the first 16 bytes, followed by the actual ciphertext")
+        print(f"In HEX: {ciphered_text.hex(sep=' ')}")
+        print(f"In ASCII: {base64.b64encode(ciphered_text).decode('ascii')}")
+        self.key_schedule_total = key_schedule_total
+        self.encryption_total = encryption_total
+
+        self.cbc_encrypted_text = final_encryption
         return final_encryption
     
-    def generate_k_bit_odd(self,k):
-        lower = 2**(k-1) + 1 
-        upper = 2**k - 1   
-        num = random.randrange(lower, upper, 2)
-        return num
-
-    def miller_rabin_test(self,n, k=40):
-        if n < 2:
-            return False
-        if n in (2, 3):
-            return True
-        if n % 2 == 0:
-            return False
-
-        s = 0
-        d = n - 1
-        while d % 2 == 0:
-            s += 1
-            d //= 2
-
-        for _ in range(k):
-            a = random.randrange(2, n - 1)
-            x = pow(a, d, n)
-            if x == 1 or x == n - 1:
-                continue
-            for _ in range(s - 1):
-                x = pow(x, 2, n)
-                if x == n - 1:
-                    break
-            else:
-                return False
-        return True
                 
                 
         
@@ -256,6 +274,220 @@ class AES:
 
 
 
+
+    def invSubBytes(self):
+        invSubBytes_text = []
+        i = 0
+        while i < len(self.invShiftRows_text):
+            byte_value = self.invShiftRows_text[i]
+            s_value = InvSbox[byte_value]
+            invSubBytes_text.append(s_value)
+            i += 1
+
+        self.invSubBytes_text = invSubBytes_text
+
+    def invShiftRows(self):
+        matrix = bytearray(self.invMixColumns_text)
+
+        i = 0
+        while i*4 < len(matrix):
+
+            row = matrix[i*4:i*4+4]
+            new_row = row.copy()
+            j = 0
+            while j<len(row):
+                if (j+i) >= 4:
+                    new_row[(j+i)-4] = row[j]
+                else:
+                    new_row[(j+i)] = row[j]
+                j += 1
+            matrix[i*4:i*4+4] = new_row
+            i += 1
+        self.invShiftRows_text = matrix
+
+    def invMixColumns(self):
+        matrix = bytearray(self.invAddRoundKey_text)
+
+        column_count = 4
+        i = 0
+        while i < column_count:
+            column = matrix[i::4]
+            new_column = column.copy()
+            j = 0
+            while j < 4:
+                k = 0
+                xor_sum = 0
+                while k < 4:
+                    a = column[k]
+                    b = InvMixer[j][k]
+                    xor_sum ^= gf_mult(a,b)
+                    k+=1
+                new_column[j] = xor_sum
+                j += 1
+            matrix[i::4] = new_column
+            i += 1
+
+        self.invMixColumns_text = matrix
+
+    def invAddRoundKey(self,byte_text,scheduled_key):
+        invAddRoundKey_text = bytearray(byte_text)
+        byte_number = 0
+        while byte_number < 16:
+            invAddRoundKey_text[byte_number] = byte_text[byte_number] ^ scheduled_key[byte_number]
+            byte_number += 1
+
+        self.invAddRoundKey_text = invAddRoundKey_text
+
+    def generate_round_keys(self,iteration_no):
+        round_keys = []
+        schedule_key = self.key
+        round_keys.append(schedule_key.copy())
+
+        iteration = 1
+        while iteration <= iteration_no:
+            schedule_key = self.key_scheduling(schedule_key,iteration)
+            round_keys.append(schedule_key.copy())
+            iteration += 1
+
+        return round_keys
+
+    def remove_padding(self,data):
+        data_length = len(data)
+        if data_length == 0:
+            return data
+
+        padding_byte = data[data_length - 1]
+
+        if padding_byte < 1 or padding_byte > 15:
+            return data
+
+        i = data_length - padding_byte
+        while i < data_length:
+            if data[i] != padding_byte:
+                return data
+            i += 1
+
+        return data[:data_length - padding_byte]
+
+    def ECB_decrypt(self,iteration_no):
+        round_keys = self.generate_round_keys(iteration_no)
+        decrypted_text = self.byte_text.copy()
+
+        decryption_total = 0.0
+        total_rounds = iteration_no + 1
+        total_blocks = len(decrypted_text) // 16
+
+        round_index = iteration_no
+        while round_index >= 0:
+            round_start = time.perf_counter()
+
+            block_no = 0
+            for block_no in range(total_blocks):
+                block = decrypted_text[block_no*16:block_no*16+16]
+
+                self.invAddRoundKey(block,round_keys[round_index])
+
+                if round_index == iteration_no:
+                    self.invMixColumns_text = self.invAddRoundKey_text
+                    self.invShiftRows()
+                    self.invSubBytes()
+                    decrypted_block = self.invSubBytes_text
+                else:
+                    self.invMixColumns()
+                    self.invShiftRows()
+                    self.invSubBytes()
+                    decrypted_block = self.invSubBytes_text
+
+                decrypted_text[block_no*16:block_no*16+16] = bytearray(decrypted_block)
+                block_no +=1
+
+            round_end = time.perf_counter()
+            decryption_total += (round_end - round_start)
+
+            round_index -= 1
+
+        unpadded_text = self.remove_padding(decrypted_text)
+
+        print("\nDeciphered Text:")
+        print("Before Unpadding:")
+        print(f"In HEX: {decrypted_text.hex(sep=' ')}")
+        print(f"In ASCII: {decrypted_text.decode('utf-8', errors='replace')}")
+        print("After Unpadding:")
+        print(f"In ASCII: {unpadded_text.decode('utf-8', errors='replace')}")
+        print(f"In HEX: {unpadded_text.hex(sep=' ')}")
+
+        self.decryption_total_round_calls = total_rounds
+        self.decryption_total = decryption_total
+
+        return unpadded_text
+
+    def CBC_decrypt(self,iteration_no):
+        round_keys = self.generate_round_keys(iteration_no)
+
+        iv = self.cbc_encrypted_text[0]
+        cipher_blocks = self.cbc_encrypted_text[1:]
+
+        plaintext = bytearray()
+
+        decryption_total = 0.0
+        total_rounds = iteration_no + 1
+        total_blocks = len(cipher_blocks)
+
+        block_no = 0
+        while block_no < total_blocks:
+            encrypted_block = cipher_blocks[block_no]
+
+            decrypted_block = bytearray(encrypted_block)
+
+            round_index = iteration_no
+            while round_index >= 0:
+                round_start = time.perf_counter()
+
+                self.invAddRoundKey(decrypted_block,round_keys[round_index])
+
+                if round_index == iteration_no:
+                    self.invMixColumns_text = self.invAddRoundKey_text
+                    self.invShiftRows()
+                    self.invSubBytes()
+                    decrypted_block = self.invSubBytes_text
+                else:
+                    self.invMixColumns()
+                    self.invShiftRows()
+                    self.invSubBytes()
+                    decrypted_block = self.invSubBytes_text
+
+                round_end = time.perf_counter()
+                decryption_total += (round_end - round_start)
+
+                round_index -= 1
+
+            previous_block = iv
+            if block_no != 0:
+                previous_block = cipher_blocks[block_no - 1]
+
+            decrypted_block = bytearray(decrypted_block)
+            byte_number = 0
+            while byte_number < 16:
+                decrypted_block[byte_number] = decrypted_block[byte_number] ^ previous_block[byte_number]
+                byte_number += 1
+
+            plaintext.extend(decrypted_block)
+            block_no += 1
+
+        unpadded_plaintext = self.remove_padding(plaintext)
+
+        print("\nDeciphered Text:")
+        print("Before Unpadding:")
+        print(f"In HEX: {plaintext.hex(sep=' ')}")
+        print(f"In ASCII: {plaintext.decode('utf-8', errors='replace')}")
+        print("After Unpadding:")
+        print(f"In ASCII: {unpadded_plaintext.decode('utf-8', errors='replace')}")
+        print(f"In HEX: {unpadded_plaintext.hex(sep=' ')}")
+
+        self.decryption_total_round_calls = total_rounds * total_blocks
+        self.decryption_total = decryption_total
+
+        return unpadded_plaintext
 
     def print_text(self,text:bytes):
         count = 0
@@ -267,15 +499,23 @@ class AES:
 
     
 
-aes = AES('1234567812345678',mode="ECB",plaintext="1234567812345678")
-# aes.process_key()
-# aes.process_plain_text()
-# aes.subBytes()
-# aes.shiftRows()
-# aes.mixColumns()
-key = "1234567812345678"
+aes = AES('BUET CSE20 Batch',mode="CBC",plaintext="We need picnic")
+aes.process_key()
+aes.process_plain_text()
+
+enc = aes.CBC(9)
+
+encrypted_text = enc[0] + enc[1]
+
+aes.byte_text = encrypted_text
 
 
+dec = aes.CBC_decrypt(9)
+
+print("Exection Time Details:")
+print(f"Key Schedule Time: total = {aes.key_schedule_total*1000:.4f} ms, per call = {aes.key_schedule_total/10*1000:.4f} ms")
+print(f"Encryption Time: total = {aes.encryption_total*1000:.4f} ms, per round = {aes.encryption_total/aes.encryption_total_round_calls*1000:.4f} ms")
+print(f"Decryption Time: total = {aes.decryption_total*1000:.4f} ms, per round = {aes.decryption_total/aes.decryption_total_round_calls*1000:.4f} ms")
 
 
 
